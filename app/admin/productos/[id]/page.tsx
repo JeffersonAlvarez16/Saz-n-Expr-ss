@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
 import Link from 'next/link';
 import { Producto, ProductoTipo } from '@/app/types';
+import Image from 'next/image';
 
 interface ProductoFormData extends Omit<Producto, 'id' | 'creado_en' | 'tipos'> {
   tipos: Array<{
@@ -21,7 +22,7 @@ export default function EditProductoPage() {
   const params = useParams();
   const id = params?.id as string;
   const isEditing = id !== 'nuevo';
-  
+
   const [producto, setProducto] = useState<ProductoFormData>({
     nombre: '',
     descripcion: '',
@@ -30,46 +31,27 @@ export default function EditProductoPage() {
     stock: 0,
     tipos: []
   });
-  
+
   const [isFetching, setIsFetching] = useState<boolean>(isEditing);
   const [error, setError] = useState<string>('');
   const [deleteConfirm, setDeleteConfirm] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
-  
-  // Fetch product data if in edit mode
-  useEffect(() => {
-    if (isEditing) {
-      fetchProducto();
-    } else {
-      setIsFetching(false);
-    }
-  }, [isEditing]);
-  
-  // Reset success message after 3 seconds
-  useEffect(() => {
-    if (saveSuccess) {
-      const timer = setTimeout(() => {
-        setSaveSuccess(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [saveSuccess]);
 
   // Fetch product data
-  const fetchProducto = async () => {
+  const fetchProducto = useCallback(async () => {
     setIsFetching(true);
     setError('');
-    
+
     try {
       const res = await fetch(`/api/productos/${id}`);
       if (!res.ok) {
         throw new Error('Error al cargar el producto');
       }
-      
+
       const data = await res.json();
-      
+
       setProducto({
         nombre: data.nombre,
         descripcion: data.descripcion || '',
@@ -88,18 +70,37 @@ export default function EditProductoPage() {
     } finally {
       setIsFetching(false);
     }
-  };
+  }, [id]); // Dependencia 'id'
+
+  // Fetch product data if in edit mode
+  useEffect(() => {
+    if (isEditing) {
+      fetchProducto();
+    } else {
+      setIsFetching(false);
+    }
+  }, [isEditing, fetchProducto]);
+
+  // Reset success message after 3 seconds
+  useEffect(() => {
+    if (saveSuccess) {
+      const timer = setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveSuccess]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsSaving(true);
-    
+
     try {
       const url = isEditing ? `/api/productos/${id}` : '/api/productos';
       const method = isEditing ? 'PUT' : 'POST';
-      
+
       const res = await fetch(url, {
         method,
         headers: {
@@ -107,14 +108,14 @@ export default function EditProductoPage() {
         },
         body: JSON.stringify(producto)
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Error al guardar el producto');
       }
-      
+
       setSaveSuccess(true);
-      
+
       if (!isEditing) {
         // For new products, redirect to the products list
         setTimeout(() => {
@@ -131,20 +132,20 @@ export default function EditProductoPage() {
   // Handle product deletion
   const handleDelete = async () => {
     if (!isEditing) return;
-    
+
     setIsDeleting(true);
     setError('');
-    
+
     try {
       const res = await fetch(`/api/productos/${id}`, {
         method: 'DELETE'
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Error al eliminar el producto');
       }
-      
+
       // Redirect to products list
       router.push('/admin/productos');
     } catch (err: any) {
@@ -164,7 +165,7 @@ export default function EditProductoPage() {
       ]
     });
   };
-  
+
   // Update a product type
   const updateTipo = (index: number, field: string, value: string | number) => {
     const newTipos = [...producto.tipos];
@@ -172,18 +173,18 @@ export default function EditProductoPage() {
       ...newTipos[index],
       [field]: value
     };
-    
+
     setProducto({
       ...producto,
       tipos: newTipos
     });
   };
-  
+
   // Remove a product type
   const removeTipo = (index: number) => {
     const newTipos = [...producto.tipos];
     newTipos.splice(index, 1);
-    
+
     setProducto({
       ...producto,
       tipos: newTipos
@@ -205,15 +206,15 @@ export default function EditProductoPage() {
         <h1 className="text-2xl font-bold text-gray-900">
           {isEditing ? 'Editar Producto' : 'Nuevo Producto'}
         </h1>
-        
+
         <div className="flex space-x-2">
-          <Link 
+          <Link
             href="/admin/productos"
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
           >
             Cancelar
           </Link>
-          
+
           {isEditing && !deleteConfirm && (
             <button
               onClick={() => setDeleteConfirm(true)}
@@ -299,7 +300,7 @@ export default function EditProductoPage() {
                   name="nombre"
                   id="nombre"
                   value={producto.nombre}
-                  onChange={(e) => setProducto({...producto, nombre: e.target.value})}
+                  onChange={(e) => setProducto({ ...producto, nombre: e.target.value })}
                   className="border border-gray-300 px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 block w-full"
                   required
                 />
@@ -315,7 +316,7 @@ export default function EditProductoPage() {
                   name="descripcion"
                   rows={4}
                   value={producto.descripcion}
-                  onChange={(e) => setProducto({...producto, descripcion: e.target.value})}
+                  onChange={(e) => setProducto({ ...producto, descripcion: e.target.value })}
                   className="border border-gray-300 px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 block w-full"
                 />
                 <p className="mt-2 text-sm text-gray-500">Breve descripción del producto.</p>
@@ -337,7 +338,7 @@ export default function EditProductoPage() {
                     min="0"
                     step="0.01"
                     value={producto.precio}
-                    onChange={(e) => setProducto({...producto, precio: parseFloat(e.target.value)})}
+                    onChange={(e) => setProducto({ ...producto, precio: parseFloat(e.target.value) })}
                     className="border border-gray-300 pl-7 px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 block w-full"
                     required
                   />
@@ -355,7 +356,7 @@ export default function EditProductoPage() {
                   id="stock"
                   min="0"
                   value={producto.stock}
-                  onChange={(e) => setProducto({...producto, stock: parseInt(e.target.value, 10)})}
+                  onChange={(e) => setProducto({ ...producto, stock: parseInt(e.target.value, 10) })}
                   className="border border-gray-300 px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 block w-full"
                 />
               </div>
@@ -370,7 +371,7 @@ export default function EditProductoPage() {
                   name="imagen"
                   id="imagen"
                   value={producto.imagen || ''}
-                  onChange={(e) => setProducto({...producto, imagen: e.target.value})}
+                  onChange={(e) => setProducto({ ...producto, imagen: e.target.value })}
                   className="border border-gray-300 px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 block w-full"
                   placeholder="https://ejemplo.com/imagen.jpg"
                 />
@@ -384,10 +385,13 @@ export default function EditProductoPage() {
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Vista previa</label>
                   <div className="mt-1 relative h-32 w-32 rounded-md overflow-hidden border border-gray-300">
-                    <img
+                    <Image
                       src={producto.imagen}
                       alt="Vista previa"
                       className="h-full w-full object-center object-cover"
+                      sizes="(min-width: 768px) 50vw, 100vw"
+                      width={100}
+                      height={100}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = 'https://via.placeholder.com/150?text=Error';
@@ -420,7 +424,7 @@ export default function EditProductoPage() {
               Añadir Variante
             </button>
           </div>
-          
+
           <div className="px-4 py-5 sm:p-6">
             {producto.tipos.length === 0 ? (
               <div className="text-center py-4">
@@ -443,7 +447,7 @@ export default function EditProductoPage() {
                         Eliminar
                       </button>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       {/* Nombre de la variante */}
                       <div>
@@ -459,7 +463,7 @@ export default function EditProductoPage() {
                           required
                         />
                       </div>
-                      
+
                       {/* Precio adicional */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -479,7 +483,7 @@ export default function EditProductoPage() {
                           />
                         </div>
                       </div>
-                      
+
                       {/* Stock de la variante */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">

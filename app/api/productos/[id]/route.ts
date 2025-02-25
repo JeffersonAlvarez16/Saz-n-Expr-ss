@@ -6,13 +6,15 @@ import { NextResponse } from 'next/server';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Obtener el producto por ID
+
+    const id = (await params).id
     const productoResult = await db.execute({
       sql: `SELECT * FROM productos WHERE id = ?`,
-      args: [params.id]
+      args: [id]
     });
     
     if (productoResult.rows.length === 0) {
@@ -24,7 +26,7 @@ export async function GET(
     // Obtener los tipos del producto
     const tiposResult = await db.execute({
       sql: `SELECT * FROM producto_tipos WHERE producto_id = ? ORDER BY nombre`,
-      args: [params.id]
+      args: [id]
     });
     
     //producto.tipos = tiposResult.rows;
@@ -37,7 +39,7 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { nombre, descripcion, precio, imagen, stock, tipos } = await request.json();
@@ -49,11 +51,11 @@ export async function PUT(
         { status: 400 }
       );
     }
-    
+    const id = (await params).id
     // Verificar que el producto existe
     const checkResult = await db.execute({
       sql: 'SELECT id FROM productos WHERE id = ?',
-      args: [params.id]
+      args: [id]
     });
     
     if (checkResult.rows.length === 0) {
@@ -73,7 +75,7 @@ export async function PUT(
         precio,
         imagen || null,
         stock || 0,
-        params.id
+        id
       ]
     });
     
@@ -82,7 +84,7 @@ export async function PUT(
       // Obtener tipos actuales
       const tiposActualesResult = await db.execute({
         sql: 'SELECT id FROM producto_tipos WHERE producto_id = ?',
-        args: [params.id]
+        args: [id]
       });
       
       const tiposActualesIds = tiposActualesResult.rows.map(t => t.id);
@@ -123,7 +125,7 @@ export async function PUT(
               VALUES (?, ?, ?, ?)
             `,
             args: [
-              params.id,
+              id,
               tipo.nombre,
               tipo.precio_adicional || 0,
               tipo.stock || 0
@@ -141,19 +143,20 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const id = (await params).id
     // Eliminar primero los tipos del producto para mantener la integridad
     await db.execute({
       sql: 'DELETE FROM producto_tipos WHERE producto_id = ?',
-      args: [params.id]
+      args: [id]
     });
     
     // Ahora eliminar el producto
     const result = await db.execute({
       sql: 'DELETE FROM productos WHERE id = ?',
-      args: [params.id]
+      args: [id]
     });
     
     if (result.rowsAffected === 0) {

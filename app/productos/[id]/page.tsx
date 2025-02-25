@@ -6,9 +6,9 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
 interface ProductoDetalleProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 async function getProducto(id: string): Promise<Producto | null> {
@@ -37,7 +37,8 @@ async function getProducto(id: string): Promise<Producto | null> {
 }
 
 export default async function ProductoDetalle({ params }: ProductoDetalleProps) {
-  const producto = await getProducto(params.id);
+  const resolvedParams = await params;
+  const producto = await getProducto(resolvedParams.id);
   
   if (!producto) {
     notFound();
