@@ -4,6 +4,7 @@ import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { initializeDatabase } from "./lib/db";
+import { Analytics } from "@vercel/analytics/react"
 
 const dmSans = DM_Sans({ 
   subsets: ["latin"],
@@ -29,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={dmSans.variable}>
       <body className={`${dmSans.className} antialiased text-gray-900`}>
+      <Analytics/>
         <header className="navbar sticky top-0 z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
